@@ -55,7 +55,12 @@ class Repositorio:
         return raiz.id
 
     def importar_itens(self, itens: list[ItemFormula]) -> int:
-        return self.salvar_arvore(build_tree(itens))
+        """Grava a fórmula inteira ou nada (desfaz se der erro no meio)."""
+        try:
+            return self.salvar_arvore(build_tree(itens))
+        except Exception:
+            self.conn.rollback()
+            raise
 
     def listar_produtos(self) -> list[dict]:
         rows = self.conn.execute(

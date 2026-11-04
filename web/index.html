@@ -249,7 +249,19 @@ async function carregarExemplos(){
   toast(r.inseridos.length ? "Inseridos: "+r.inseridos.join(", ") : "Exemplos já cadastrados.");
   carregarProdutos();
 }
-carregarProdutos();
+if (location.protocol === "file:") {
+  // Aberto direto do arquivo: se o servidor estiver rodando, vai para ele.
+  const SERVIDOR = "http://localhost:8000";
+  fetch(SERVIDOR + "/api/produtos", {mode: "no-cors"})
+    .then(() => location.replace(SERVIDOR))
+    .catch(() => {
+      document.getElementById("titulo").innerHTML =
+        "⚠ Servidor desligado: dê dois cliques em <code>iniciar.bat</code> " +
+        "(ou rode <code>python app_web.py</code>) e recarregue esta página.";
+    });
+} else {
+  carregarProdutos();
+}
 </script>
 </body>
 </html>

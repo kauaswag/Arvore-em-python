@@ -25,6 +25,9 @@ python app_tkinter.py    # Tela gráfica desktop
 python app_web.py        # Front-end HTML -> abre http://localhost:8000
 ```
 
+No Windows, dá para usar dois cliques em `iniciar.bat`: ele liga o servidor e abre o navegador.
+Se o servidor já estiver ligado, abrir `web/index.html` direto leva automaticamente para `http://localhost:8000`.
+
 > As duas telas usam o **mesmo banco** (`formulas.db`, criado automaticamente).
 > Na primeira execução, Caneta e Computador já são cadastrados como exemplo.
 > Para começar do zero, apague o arquivo `formulas.db`.

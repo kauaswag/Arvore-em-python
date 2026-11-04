@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fórmula de Produtos · Árvore Genérica</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --borda:#e3e7ef; --texto:#1f2937; --suave:#6b7280;
+    --pri:#2f5bea; --pri2:#e8eeff; --ok:#15803d; --erro:#b91c1c; --aviso:#fff4e5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--texto)}
+  header{background:#1e3a8a;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px}
+  header h1{font-size:19px;margin:0;font-weight:600}
+  header span{opacity:.75;font-size:13px}
+  .layout{display:grid;grid-template-columns:240px 1fr 300px;gap:16px;padding:16px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--borda);border-radius:10px;padding:14px}
+  .card h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--suave);margin:0 0 10px}
+  button{font:inherit;border:1px solid var(--borda);background:#fff;border-radius:7px;padding:7px 10px;cursor:pointer}
+  button:hover{background:var(--pri2)}
+  button.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+  button.pri:hover{background:#2448c4}
+  button.peq{padding:3px 7px;font-size:12px}
+  button.perigo{color:var(--erro)}
+  .bloco{display:flex;flex-direction:column;gap:6px}
+  #produtos{list-style:none;margin:0 0 10px;padding:0}
+  #produtos li{padding:9px 10px;border-radius:7px;cursor:pointer}
+  #produtos li:hover{background:var(--pri2)}
+  #produtos li.ativo{background:var(--pri);color:#fff}
+  .topo{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .topo h3{margin:0;font-size:20px}
+  .total{font-weight:700;color:var(--ok);font-size:18px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:var(--suave);font-weight:600;border-bottom:2px solid var(--borda);padding:7px 6px}
+  td{border-bottom:1px solid var(--borda);padding:6px;white-space:nowrap}
+  td.num{text-align:right;white-space:nowrap}
+  th.num{text-align:right}
+  tr.diff td.val{color:var(--erro);font-weight:600}
+  tr:hover td{background:#fafbff}
+  .ramo{color:#9ca3af;font-family:Consolas,monospace;white-space:pre}
+  .tag{white-space:nowrap;font-size:11px;padding:2px 6px;border-radius:99px;background:#eef2f7;color:#475569}
+  .tag.produto{background:#dbeafe;color:#1e40af}.tag.sub{background:#fef3c7;color:#92400e}
+  .acoes{white-space:nowrap;text-align:right}
+  .legenda{font-size:12px;color:var(--suave);margin-top:8px}
+  label{font-size:13px;color:var(--suave)}
+  input{font:inherit;width:100%;padding:7px 9px;border:1px solid var(--borda);border-radius:7px}
+  #resultado{margin-top:10px;font-size:13px}
+  #resultado table{font-size:13px}
+  .resumo{margin-top:8px;padding:8px;border-radius:7px;background:var(--pri2);font-weight:600}
+  dialog{border:none;border-radius:12px;padding:20px;width:340px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+  dialog::backdrop{background:rgba(15,23,42,.45)}
+  dialog h3{margin:0 0 12px}
+  dialog .linha{margin-bottom:10px}
+  dialog .bts{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+  #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;
+    padding:10px 16px;border-radius:8px;opacity:0;transition:.3s;pointer-events:none;max-width:90%}
+  #toast.show{opacity:1}
+  pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto;font-size:13px}
+  @media (max-width:1000px){.layout{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌳 Fórmula de Produtos</h1><span>Árvore genérica · explosão · implosão</span>
+</header>
+
+<div class="layout">
+  <!-- Produtos -->
+  <section class="card">
+    <h2>Produtos</h2>
+    <ul id="produtos"></ul>
+    <div class="bloco">
+      <button class="pri" onclick="novoProduto()">+ Novo produto</button>
+      <button onclick="carregarExemplos()">Carregar exemplos</button>
+    </div>
+  </section>
+
+  <!-- Árvore -->
+  <section class="card">
+    <div class="topo">
+      <h3 id="titulo">Selecione um produto</h3>
+      <span class="total" id="total"></span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Componente (explosão)</th><th>Tipo</th><th class="num">Qtd</th>
+        <th class="num">Valor cadastrado</th><th class="num">Custo unitário</th><th class="num">Custo total (qtd × unit.)</th><th></th>
+      </tr></thead>
+      <tbody id="arvore"></tbody>
+    </table>
+    <div class="legenda">Em vermelho: valor cadastrado diferente do custo calculado pelos componentes — use <b>Implosão</b> para corrigir.</div>
+    <details style="margin-top:10px"><summary>Ver explosão em texto</summary><pre id="texto"></pre></details>
+  </section>
+
+  <!-- Ações -->
+  <section class="card">
+    <h2>Custos</h2>
+    <div class="bloco">
+      <button class="pri" onclick="fazerImplosao()">🔁 Implosão (remontar custo)</button>
+    </div>
+    <h2 style="margin-top:18px">Produção</h2>
+    <label for="qtdProd">Quantidade a produzir</label>
+    <input id="qtdProd" type="number" min="1" value="1">
+    <div class="bloco" style="margin-top:8px">
+      <button onclick="calcularProducao()">📦 Calcular componentes</button>
+    </div>
+    <div id="resultado"></div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="frm">
+    <h3 id="dlgTitulo"></h3>
+    <div class="linha"><label>Nome</label><input id="fNome" required></div>
+    <div class="linha"><label>Quantidade</label><input id="fQtd" type="number" step="any" min="0.0001" required></div>
+    <div class="linha"><label>Valor unitário (R$)</label><input id="fValor" type="number" step="0.01" min="0" required></div>
+    <div class="bts"><button value="cancel" formnovalidate>Cancelar</button><button class="pri" value="ok">Salvar</button></div>
+  </form>
+</dialog>
+<div id="toast"></div>
+
+<script>
+let produtoAtual = null;
+const brl = v => Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const qtd = v => Number.isInteger(v) ? v : Number(v).toLocaleString("pt-BR",{maximumFractionDigits:2});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2800);}
+
+async function api(url, metodo="GET", corpo){
+  const r = await fetch(url,{method:metodo,headers:{"Content-Type":"application/json"},
+                              body: corpo ? JSON.stringify(corpo) : undefined});
+  const d = await r.json();
+  if(!r.ok){ toast("Erro: " + (d.erro || r.status)); throw new Error(d.erro); }
+  return d;
+}
+
+// Formulário em modal; resolve com {nome, quantidade, valor} ou null
+function formulario(titulo, dados={nome:"",quantidade:1,valor:0}, soValor=false, semQtd=false){
+  return new Promise(res=>{
+    const dlg=document.getElementById("dlg");
+    document.getElementById("dlgTitulo").textContent=titulo;
+    fNome.value=dados.nome; fQtd.value=dados.quantidade; fValor.value=dados.valor;
+    fNome.disabled=soValor; fQtd.disabled=soValor||semQtd;
+    if(semQtd) fQtd.value=1;
+    dlg.onclose=()=>res(dlg.returnValue==="ok" ? {nome:fNome.value.trim(),
+        quantidade:parseFloat(fQtd.value), valor:parseFloat(fValor.value)} : null);
+    dlg.returnValue=""; dlg.showModal(); (soValor?fValor:fNome).focus();
+  });
+}
+
+async function carregarProdutos(selecionar){
+  const lista = await api("/api/produtos");
+  const ul = document.getElementById("produtos"); ul.innerHTML="";
+  lista.forEach(p=>{
+    const li=document.createElement("li"); li.textContent=p.nome;
+    li.onclick=()=>abrirProduto(p.id); li.dataset.id=p.id; ul.appendChild(li);
+  });
+  const alvo = selecionar ?? (lista.find(p=>p.id===produtoAtual)?.id) ?? lista[0]?.id;
+  if(alvo) abrirProduto(alvo); else limpar();
+}
+
+function limpar(){produtoAtual=null;titulo.textContent="Nenhum produto";total.textContent="";arvore.innerHTML="";texto.textContent="";}
+
+async function abrirProduto(id){
+  produtoAtual=id;
+  document.querySelectorAll("#produtos li").forEach(li=>li.classList.toggle("ativo", +li.dataset.id===id));
+  const raiz = await api(`/api/produtos/${id}`);
+  titulo.textContent = "Fórmula: " + raiz.nome;
+  total.textContent = "Custo total: " + brl(raiz.custo_total);
+  texto.textContent = raiz.texto;
+  const tbody = document.getElementById("arvore"); tbody.innerHTML="";
+  const linha = (no, nivel, prefixo, ultimo) => {
+    const tipo = nivel===0 ? '<span class="tag produto">Produto</span>'
+               : no.folha ? '<span class="tag">Matéria-prima</span>' : '<span class="tag sub">Subconjunto</span>';
+    const ramo = nivel===0 ? "" : prefixo + (ultimo ? "└─ " : "├─ ");
+    const diff = Math.abs(no.custo_unitario - no.valor) > 0.005;
+    const tr=document.createElement("tr"); if(diff) tr.className="diff";
+    tr.innerHTML = `<td><span class="ramo">${ramo}</span>${nivel===0?"<b>":""}${esc(no.nome)}${nivel===0?"</b>":""}</td>
+      <td>${tipo}</td><td class="num">${nivel===0 ? 1 : qtd(no.quantidade)}</td>
+      <td class="num val">${brl(no.valor)}</td><td class="num">${brl(no.custo_unitario)}</td>
+      <td class="num"><b>${brl(no.custo_total)}</b></td>
+      <td class="acoes">
+        <button class="peq" title="Adicionar filho" onclick="addFilho(${no.id},'${esc(no.nome).replace(/'/g,"\\'")}')">+</button>
+        <button class="peq" title="Editar" onclick='editar(${JSON.stringify({id:no.id,nome:no.nome,quantidade:no.quantidade,valor:no.valor,raiz:nivel===0}).replace(/'/g,"&#39;")})'>✏</button>
+        <button class="peq" title="Atualizar valor" onclick='mudarValor(${JSON.stringify({id:no.id,nome:no.nome,quantidade:no.quantidade,valor:no.valor}).replace(/'/g,"&#39;")})'>R$</button>
+        <button class="peq perigo" title="Excluir" onclick="excluir(${no.id}, ${nivel===0})">🗑</button>
+      </td>`;
+    tbody.appendChild(tr);
+    const novoPref = nivel===0 ? "" : prefixo + (ultimo ? "   " : "│  ");
+    no.filhos.forEach((f,i)=>linha(f, nivel+1, novoPref, i===no.filhos.length-1));
+  };
+  linha(raiz,0,"",true);
+  document.getElementById("resultado").innerHTML="";
+}
+
+async function novoProduto(){
+  const d = await formulario("Novo produto", undefined, false, true);
+  if(!d) return;
+  const r = await api("/api/produtos","POST",d);
+  toast("Produto criado. Use + para adicionar componentes.");
+  carregarProdutos(r.id);
+}
+async function addFilho(paiId, nomePai){
+  const d = await formulario(`Novo componente de "${nomePai}"`);
+  if(!d) return;
+  await api("/api/componentes","POST",{...d, pai_id:paiId});
+  abrirProduto(produtoAtual);
+}
+async function editar(no){
+  const d = await formulario(`Editar "${no.nome}"`, no, false, no.raiz);
+  if(!d) return;
+  await api(`/api/componentes/${no.id}`,"PUT",d);
+  carregarProdutos(produtoAtual);
+}
+async function mudarValor(no){
+  const d = await formulario(`Atualizar valor de "${no.nome}"`, no, true);
+  if(!d) return;
+  const r = await api(`/api/componentes/${no.id}/valor`,"PUT",{valor:d.valor});
+  await abrirProduto(produtoAtual);
+  if(confirm(`Custo calculado: ${brl(r.custo_antes)} → ${brl(r.custo_depois)}\n\nFazer a IMPLOSÃO agora (remontar o custo dos níveis acima)?`))
+    fazerImplosao();
+}
+async function excluir(id, ehProduto){
+  if(!confirm(ehProduto ? "Excluir o produto e toda a fórmula?" : "Excluir o componente e seus subcomponentes?")) return;
+  await api(`/api/componentes/${id}`,"DELETE");
+  ehProduto ? (produtoAtual=null, carregarProdutos()) : abrirProduto(produtoAtual);
+}
+async function fazerImplosao(){
+  if(!produtoAtual) return;
+  const r = await api(`/api/produtos/${produtoAtual}/implosao`,"POST");
+  await abrirProduto(produtoAtual);
+  toast(`Implosão: valor do produto ${brl(r.valor_antes)} → ${brl(r.valor_depois)}`);
+}
+async function calcularProducao(){
+  if(!produtoAtual) return;
+  const n = document.getElementById("qtdProd").value;
+  const r = await api(`/api/produtos/${produtoAtual}/producao?n=${encodeURIComponent(n)}`);
+  document.getElementById("resultado").innerHTML = `
+    <table><thead><tr><th>Componente</th><th class="num">Qtd</th><th class="num">Valor</th></tr></thead>
+    <tbody>${r.itens.map(i=>`<tr><td>${esc(i.nome)}</td><td class="num">${qtd(i.quantidade)}</td><td class="num">${brl(i.valor)}</td></tr>`).join("")}</tbody></table>
+    <div class="resumo">${qtd(r.quantidade_produto)} × ${esc(r.produto)}<br>
+      Componentes: ${qtd(r.total_componentes)}<br>Valor de aquisição: ${brl(r.valor_aquisicao)}</div>`;
+}
+async function carregarExemplos(){
+  const r = await api("/api/exemplos","POST");
+  toast(r.inseridos.length ? "Inseridos: "+r.inseridos.join(", ") : "Exemplos já cadastrados.");
+  carregarProdutos();
+}
+carregarProdutos();
+</script>
+</body>
+</html>
